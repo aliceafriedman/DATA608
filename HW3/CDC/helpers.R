@@ -1,68 +1,105 @@
-library(dplyr)
 library(plotly)
+library(dplyr)
+library(reshape)
+library(tidyr)
 
-###### DATA PREP #######
+####### Set up #############
+#load and prep data
+df_raw <- read.csv('data/cleaned-cdc-mortality-1999-2010-2.csv') 
 
-#load data
-df <- read.csv('data/cleaned-cdc-mortality-1999-2010-2.csv') 
+df <- df_raw %>% 
+  arrange(ICD.Chapter, -Crude.Rate) 
+
 df$State <- factor(df$State)
-df <- df %>% arrange(ICD.Chapter, -Crude.Rate)
+df$year <- factor(df$Year, levels = seq(1999, 2010, 1))
 
-#create data slice based on inputs
-SLICE<- function(cause, year){
+USA <- df %>% 
+  group_by(ICD.Chapter, Year) %>%
+  summarize(State= 'USA',
+            Crude.Rate = sum(Deaths)/sum(Population)*100000, 
+            Population = sum(Population),
+            Deaths = sum(Deaths)
+            ) %>% 
+  rbind(df) %>% 
+  arrange(Year)
+
+########## Functions ##########
+
+#define function to generate map
+
+MAP <- function(slice){
   
-  #filter data
-  slice <- df %>%
-    filter(ICD.Chapter == cause,
-           Year == year)
+  fig <- plotly::plot_geo(slice, 
+                  locationmode = 'USA-states'
+                  )
   
-
-  return (slice)
-} 
-
-
-
-###### MAP ########
-
-#create figure
-FIG <- function(slice){
-  fig <- plot_geo(slice, locationmode = 'USA-states')
-  
-  fig <- fig %>% add_trace(
-    
+  fig <- fig %>% plotly::add_trace(
     z = ~Crude.Rate, 
     locations = ~State,
-    color = ~Crude.Rate, colors = 'Purples',
-    
+    color = ~Crude.Rate, 
+    colors = 'Purples',
     hovertemplate = paste('<b>State</b></i>: ', slice$State, '<br>',
                           '<i><b>Deaths per 100k: ', slice$Crude.Rate, '</b></i><br>',
                           'Population: ', format(slice$Population, big.mark=","), '<br>',
                           'Total Deaths: ', slice$Deaths)
   )
   
+  #map params
+  g <- list(scope = 'usa', 
+            projection = list(type = 'albers usa'), 
+            showlakes = TRUE, 
+            lakecolor = toRGB('white')
+            )
   
-  fig <- fig %>% colorbar()
+  #layout
+  fig <- fig %>% plotly::layout(geo=g) %>% colorbar(title = "Deaths per 100,000")
   
-  fig_title <- paste( slice$ICD.Chapter[1], '<br>',
-                      slice$Year[1], 'Deaths per 100,000 Residents By State'
-                     )
-
-  fig <- fig %>% layout(
-    title = fig_title,
-    geo = list(
-      scope = 'usa',
-      projection = list(type = 'albers usa'),
-      showlakes = TRUE,
-      lakecolor = toRGB('white')
-    ),
-    showlegend = FALSE
-  )
   return(fig)
   
 }
 
+#define function to generate line chart
+
+
+LINE <- function(cause, state_list){
+  usa <- USA %>% 
+    dplyr::filter(ICD.Chapter==cause) %>%
+    ungroup() %>% group_by(Year) %>%
+    dplyr::filter(ICD.Chapter == cause) %>%
+    select(Year, State, Crude.Rate) %>%
+    cast(Year ~ State, fill=NA)  
+  
+  fig <- plot_ly(usa, 
+                 x = ~Year, 
+                 y = ~USA, 
+                 type = 'scatter', 
+                 mode = 'lines', 
+                 name="USA Average", 
+                 line = list(width = 4) 
+                 )  %>%
+    layout(yaxis = list(rangemode = "tozero", title = "Deaths per 100,000 Pop.", fixedrange=TRUE),
+           xaxis = list(fixedrange=TRUE)
+    )
+  
+  for (state in state_list){
+      print(state)
+      fig <- fig %>% 
+        add_trace(x = ~Year, 
+                  y = as.formula(paste0("~`", state, "`")), 
+                  name = state, 
+                  mode = 'lines',
+                  line = list(width = 1) 
+                  )
+    }
+  
+  #print(head(usa))
+  return(fig) 
+}
+
+
+#############
 #test
-#cause <- "Certain infectious and parasitic diseases"
-#year <- 2010
-#slice <- SLICE(cause, year)
-#FIG(slice)
+cause <- "Pregnancy, childbirth and the puerperium"
+dft <- df %>% dplyr::filter(ICD.Chapter == cause)
+state_list <- c("AK", "TX", "AL")
+LINE(cause, state_list)
