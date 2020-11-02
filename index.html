@@ -1,0 +1,111 @@
+<html>
+
+<!--
+    HW5 completed 10-31-202 by Alice Friedman for DATA608
+-->
+
+<head>
+    <title>DATA608 Assignment 5</title>
+</head>
+
+<body>
+    
+
+<h1>Beginner Assignment</h1>
+
+<script type="text/javascript">
+
+document.write('<br><h2>Part 1: Reverse a word</h2>')
+
+// Part 1: Reverse a word
+
+function reverse(word){
+    //split word into array
+    var letters = word.split("");
+    // instantiate blank array
+    var res = [];
+    //reverse loop through the array to create the word in array form in reverse
+    for (i = -1; i >= -letters.length; i--) {
+    res.push(letters.slice(i)[0]);
+    }
+    //join array to create reversed word
+    var rev = res.join("");
+    
+    return(rev);
+};
+
+function calc(){
+    var t = document.getElementById("reverse_word");
+    t.innerHTML = reverse(document.getElementById('word').value);
+};
+
+//Part 2: Return a Table
+
+
+// function adapted from https://stackoverflow.com/questions/14643617/create-table-using-javascript
+function addTable() {
+  var myTableDiv = document.getElementById("multiples");
+  myTableDiv.textContent = '';
+  var num = document.getElementById('num').value;
+
+  var table = document.createElement('TABLE');
+  table.border = '1';
+
+  var tableBody = document.createElement('TBODY');
+  table.appendChild(tableBody);
+
+  var res = 0;
+
+  for (var i = 0; i < 4; i++) {
+    var tr = document.createElement('TR');
+    tableBody.appendChild(tr);
+
+    for (var j = 0; j < 5; j++) {
+      if(num == 1){
+          res = 1;
+        }
+      else {
+          res += +num;
+        }    
+      var td = document.createElement('TD');
+      td.width = '75';
+      td.appendChild(document.createTextNode(res));
+      tr.appendChild(td);
+    }
+  }
+  myTableDiv.appendChild(table);
+}
+
+</script>
+
+<!-- HTML -->
+
+<p>
+<form>
+    <input id="word" type="text">
+    <input type="button" value="Click to reverse" onClick="calc();">
+</form>
+</p>
+
+<div id="reverse_word"></div>
+
+
+
+<h2>Print first 20 multiples of a number in a 5X4 table</h2>
+
+<p>
+    <form>
+        <input id="num" type="number">
+        <input type="button" value="Click to see multiples" onClick="addTable();">
+    </form>
+</p>
+
+
+<div id="multiples"></div>
+
+
+
+
+</body>
+
+</html>
